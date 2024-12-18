@@ -8,6 +8,24 @@ saver.c
 results.txt
 
 ```
+ gcc calculator.c -o calculator
+```
+```
+    gcc addition.c -o addition
+```
+```
+    gcc subtraction.c -o subtraction
+```
+ ```
+gcc multiplication.c -o multiplication
+```
+```
+    gcc division.c -o division
+```
+    gcc saver.c -o saver
+```
+
+```
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
