@@ -113,3 +113,24 @@ pid_t pid = fork();
         }
 
 ```
+
+
+```
+if (option >= 1 && option <= 4) {
+            // Take operands input
+            printf("Enter the first number: ");
+            if (scanf("%d", &operand1) != 1) {
+                printf("Invalid input. Please enter a number.\n");
+                while (getchar() != '\n');
+                continue;
+            }
+
+            printf("Enter the second number: ");
+            if (scanf("%d", &operand2) != 1) {
+                printf("Invalid input. Please enter a number.\n");
+                while (getchar() != '\n');
+                continue;
+            }
+        }
+
+```
