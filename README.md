@@ -45,7 +45,7 @@ int main() {
 int main() {
     int option = 0;
     int operand1, operand2;
-
+    
     while (1) {
         printf("\nCalculator:\n");
         printf("1- addition\n");
@@ -176,7 +176,5 @@ int main() {
     return 0; 
 }
 
-
-```
 
 ```
