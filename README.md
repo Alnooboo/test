@@ -139,5 +139,32 @@ int main() {
     return 0;
 }
 
+```
+
+```
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() { 
+    printf("~~~~~~~~~~~~~~\n");
+    int a, b;
+
+    // Read the operands
+    if (scanf("%d %d", &a, &b) != 2) {
+        fprintf(stderr, "Failed to read operands\n");
+        return 1;
+    }
+
+    // Check for division by zero
+    if (b == 0) {
+        fprintf(stderr, "Error: Division by zero is not allowed.\n");
+        return 1;
+    }
+
+    // Perform the division
+    printf("Result: %d\n", a / b);
+
+    return 0; 
+}
 
 ```
