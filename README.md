@@ -50,7 +50,7 @@ int main() {
 int main() {
     int option = 0;
     int operand1, operand2;
-    
+
     while (1) {
         printf("\nCalculator:\n");
         printf("1- addition\n");
@@ -63,7 +63,7 @@ int main() {
 
         if (scanf("%d", &option) != 1) {
             printf("Invalid input. Please enter a number.\n");
-            while (getchar() != '\n');
+            while (getchar() != '\n'); // Clear invalid input
             continue;
         }
 
@@ -81,14 +81,14 @@ int main() {
             printf("Enter the first number: ");
             if (scanf("%d", &operand1) != 1) {
                 printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n');
+                while (getchar() != '\n'); // Clear invalid input
                 continue;
             }
 
             printf("Enter the second number: ");
             if (scanf("%d", &operand2) != 1) {
                 printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n');
+                while (getchar() != '\n'); // Clear invalid input
                 continue;
             }
         }
@@ -103,9 +103,9 @@ int main() {
 
         if (pid == 0) {
             // Child process
-            close(pipefd[0]); // Close the read end
-            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to the write end of the pipe
-            close(pipefd[1]);
+            close(pipefd[1]); // Close the write end
+            dup2(pipefd[0], STDIN_FILENO); // Redirect stdin to the read end of the pipe
+            close(pipefd[0]);
 
             switch (option) {
                 case 1:
@@ -129,15 +129,20 @@ int main() {
             exit(EXIT_FAILURE);
         } else {
             // Parent process
-            close(pipefd[1]); // Close the write end
-            char result[100] = {0};
-
-            // Read the result from the pipe
-            ssize_t n = read(pipefd[0], result, sizeof(result) - 1); // Leave space for null terminator
             close(pipefd[0]); // Close the read end
 
-            if (n > 0) {
-                result[n] = '\0'; // Null-terminate the string
+            if (option >= 1 && option <= 4) {
+                // Write operands to the pipe
+                dprintf(pipefd[1], "%d %d\n", operand1, operand2);
+            }
+            close(pipefd[1]); // Close the write end
+
+            char result[100] = {0};
+            int status;
+            waitpid(pid, &status, 0);
+
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                // Read result from the pipe
                 printf("Result: %s", result);
 
                 // Call saver.c with the result
@@ -147,20 +152,17 @@ int main() {
                     perror("Exec failed");
                     exit(EXIT_FAILURE);
                 } else {
-                    int status;
                     waitpid(saver_pid, &status, 0);
                 }
             } else {
-                printf("Error: Failed to read result from child process.\n");
+                printf("Child process encountered an error.\n");
             }
-
-            int status;
-            waitpid(pid, &status, 0);
         }
     }
 
     return 0;
 }
+
 ```
 ```
 #include <stdlib.h>
@@ -169,17 +171,19 @@ int main() {
 int main() { 
     int a, b;
 
-    // Read operands from stdin
+    // Read operands from stdin (provided by the parent process via the pipe)
     if (scanf("%d %d", &a, &b) != 2) {
         fprintf(stderr, "Failed to read operands\n");
         return 1;
     }
-  
+
+    // Perform the calculation
     int result = a + b;
-    printf("%d\n", result); // Write only the result
+    printf("%d\n", result); // Write the result to stdout (read by the parent)
 
     return 0; 
 }
+
 
 
 ```
