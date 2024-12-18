@@ -134,6 +134,27 @@ int main() {
 
             printf("Result from operation: %s\n", result); // Print the result
 
+            // Call saver.c to save the result
+            pid_t saver_pid = fork();
+            if (saver_pid < 0) {
+                perror("Fork for saver failed");
+                exit(EXIT_FAILURE);
+            } else if (saver_pid == 0) {
+                // Child process to execute saver.c
+                execl("./saver", "saver", result, NULL);
+                perror("Exec failed for saver");
+                exit(EXIT_FAILURE);
+            } else {
+                // Parent process waits for saver to finish
+                int status;
+                waitpid(saver_pid, &status, 0);
+                if (WIFEXITED(status)) {
+                    printf("Saver process exited with status %d.\n", WEXITSTATUS(status));
+                } else {
+                    printf("Saver process did not exit successfully.\n");
+                }
+            }
+
             int status;
             waitpid(pid, &status, 0); // Wait for the child to complete
             if (WIFEXITED(status)) {
@@ -146,6 +167,7 @@ int main() {
 
     return 0;
 }
+
 
 ```
 ```
