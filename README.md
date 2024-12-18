@@ -134,3 +134,14 @@ if (option >= 1 && option <= 4) {
         }
 
 ```
+
+
+```
+// Child process
+            close(pipefd[1]); // Close the write end of the pipe
+            // Redirect the read end of the pipe to standard input
+            dup2(pipefd[0], STDIN_FILENO);
+            close(pipefd[0]); // Close the original read end
+
+
+```
