@@ -103,22 +103,23 @@ int main() {
             dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to the write end of the pipe
             close(pipefd[1]); // Close the original write end
 
-            // Execute the corresponding file
+            // Execute the corresponding file with operands as arguments
+            char op1[10], op2[10];
+            snprintf(op1, sizeof(op1), "%d", operand1);
+            snprintf(op2, sizeof(op2), "%d", operand2);
+
             switch (option) {
                 case 1:
-                    execl("./addition", "addition", NULL);
+                    execl("./addition", "addition", op1, op2, NULL);
                     break;
                 case 2:
-                    execl("./subtraction", "subtraction", NULL);
+                    execl("./subtraction", "subtraction", op1, op2, NULL);
                     break;
                 case 3:
-                    execl("./multiplication", "multiplication", NULL);
+                    execl("./multiplication", "multiplication", op1, op2, NULL);
                     break;
                 case 4:
-                    execl("./division", "division", NULL);
-                    break;
-                case 5:
-                    execl("./saver", "saver", NULL);
+                    execl("./division", "division", op1, op2, NULL);
                     break;
             }
             perror("Exec failed");
@@ -127,13 +128,11 @@ int main() {
             // Parent process
             close(pipefd[1]); // Close the write end of the pipe
 
-            if (option >= 1 && option <= 4) {
-                char result[100]; // Buffer to store the result
-                read(pipefd[0], result, sizeof(result)); // Read the result from the pipe
-                close(pipefd[0]); // Close the read end of the pipe
+            char result[100]; // Buffer to store the result
+            read(pipefd[0], result, sizeof(result)); // Read the result from the pipe
+            close(pipefd[0]); // Close the read end of the pipe
 
-                printf("Result from operation: %s\n", result); // Print the result
-            }
+            printf("Result from operation: %s\n", result); // Print the result
 
             int status;
             waitpid(pid, &status, 0); // Wait for the child to complete
@@ -150,5 +149,23 @@ int main() {
 
 ```
 ```
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(int argc, char *argv[]) { 
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <operand1> <operand2>\n", argv[0]);
+        return 1;
+    }
+
+    int a = atoi(argv[1]);
+    int b = atoi(argv[2]);
+
+    // Perform addition
+    int result = a + b;
+    printf("%d\n", result); // Send the result to stdout
+
+    return 0;
+}
 
 ```
