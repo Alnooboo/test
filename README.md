@@ -158,3 +158,14 @@ if (option >= 1 && option <= 4) {
 
             close(pipefd[1]); // Close the write end of the pipe
 ```
+
+
+```
+int a, b;
+    if (scanf("%d %d", &a, &b) != 2) {
+        fprintf(stderr, "Failed to read operands\n");
+        return 1;
+    }
+    printf("Result: %d\n", a + b);
+
+```
