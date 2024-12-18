@@ -48,8 +48,8 @@ int main() {
 #include <sys/wait.h>
 
 int main() {
-    int option = 0; // Variable to store user input
-    int operand1, operand2; // Operands for calculations
+    int option = 0;
+    int operand1, operand2;
 
     while (1) {
         // Display the menu
@@ -64,7 +64,7 @@ int main() {
 
         if (scanf("%d", &option) != 1) {
             printf("Invalid input. Please enter a number.\n");
-            while (getchar() != '\n');
+            while (getchar() != '\n'); // Clear invalid input
             continue;
         }
 
@@ -79,23 +79,21 @@ int main() {
         }
 
         if (option >= 1 && option <= 4) {
-            // Take operands input
             printf("Enter the first number: ");
             if (scanf("%d", &operand1) != 1) {
                 printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n');
+                while (getchar() != '\n'); // Clear invalid input
                 continue;
             }
 
             printf("Enter the second number: ");
             if (scanf("%d", &operand2) != 1) {
                 printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n');
+                while (getchar() != '\n'); // Clear invalid input
                 continue;
             }
         }
 
-        // Communication Pipe
         int pipefd[2];
         if (pipe(pipefd) == -1) {
             perror("Pipe failed");
@@ -109,11 +107,11 @@ int main() {
             exit(EXIT_FAILURE);
         } else if (pid == 0) {
             // Child process
-            close(pipefd[0]); // Close the read end of the pipe
-            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to the write end of the pipe
-            close(pipefd[1]); // Close the original write end
+            close(pipefd[1]); // Close the write end
+            dup2(pipefd[0], STDIN_FILENO); // Redirect stdin to read from the pipe
+            close(pipefd[0]);
 
-            // Execute the corresponding file
+            // Execute the corresponding operation
             switch (option) {
                 case 1:
                     execl("./addition", "addition", NULL);
@@ -128,33 +126,33 @@ int main() {
                     execl("./division", "division", NULL);
                     break;
             }
+
             perror("Exec failed");
             exit(EXIT_FAILURE);
         } else {
             // Parent process
-            close(pipefd[1]); // Close the write end of the pipe
+            close(pipefd[0]); // Close the read end
 
-            // Read the result from the pipe
-            char result[100];
-            ssize_t bytesRead = read(pipefd[0], result, sizeof(result) - 1);
-            close(pipefd[0]); // Close the read end of the pipe
+            // Write the operands to the pipe before the child starts executing
+            dprintf(pipefd[1], "%d %d\n", operand1, operand2);
+            close(pipefd[1]); // Close the write end
 
-            if (bytesRead > 0) {
-                result[bytesRead] = '\0'; // Null-terminate the result
-                printf("The result after the operation is: %s\n", result);
-            } else {
-                printf("Error: Failed to read result from operation.\n");
-            }
-
-            // Wait for the child process to finish
+            char result[100] = {0};
             int status;
-            waitpid(pid, &status, 0);
+            waitpid(pid, &status, 0); // Wait for the child to complete
+
+            if (WIFEXITED(status)) {
+                if (WEXITSTATUS(status) == 0) {
+                    printf("The result after the operation is: %s\n", result);
+                } else {
+                    printf("The child process encountered an error.\n");
+                }
+            }
         }
     }
 
     return 0;
 }
-
 
 ```
 ```
@@ -164,17 +162,17 @@ int main() {
 int main() { 
     int a, b;
 
-    // Read operands from stdin (redirected by parent process)
+    // Read operands from stdin (redirected by the parent)
     if (scanf("%d %d", &a, &b) != 2) {
         fprintf(stderr, "Failed to read operands\n");
         return 1;
     }
 
-    // Perform the addition
+    // Perform addition
     int result = a + b;
     printf("%d\n", result); // Send the result to stdout
 
-    return 0; 
+    return 0;
 }
 
 ```
