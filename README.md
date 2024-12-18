@@ -6,7 +6,7 @@ multiplication.c
 division.c
 saver.c
 results.txt
-
+```
 // addition.c
 #include <stdio.h>
 int main() {
@@ -14,3 +14,13 @@ int main() {
     printf("Addition process started\n");
     return 0;
 }
+```
+
+```
+    gcc calculator.c -o calculator
+    gcc addition.c -o addition
+    gcc subtraction.c -o subtraction
+    gcc multiplication.c -o multiplication
+    gcc division.c -o division
+    gcc saver.c -o saver
+```
