@@ -20,17 +20,22 @@ int main() {
 ```
     gcc calculator.c -o calculator
 ```
+
 ```
     gcc addition.c -o addition
 ```
+
 ```
     gcc subtraction.c -o subtraction
 ```
+
 ```
     gcc multiplication.c -o multiplication
 ```
+
 ```
     gcc division.c -o division
+```
 ```
     gcc saver.c -o saver
 ```
@@ -156,7 +161,7 @@ int main() {
 
     return 0;
 }
-
+```
 ```
 #include <stdlib.h>
 #include <stdio.h>
