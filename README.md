@@ -28,95 +28,42 @@ int main() {
 ```
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int main() {
     int option = 0; // Variable to store user input
+    int operand1, operand2; // Operands for calculations
 
-    while (1) { // Infinite loop to keep the program running until "exit"
+    while (1) {
         // Display the menu
         printf("\nCalculator:\n");
-        printf("▪ 1- addition\n");
-        printf("▪ 2- subtraction\n");
-        printf("▪ 3- multiplication\n");
-        printf("▪ 4- division\n");
-        printf("▪ 5- history\n");
-        printf("▪ 6- exit\n");
+        printf("1- addition\n");
+        printf("2- subtraction\n");
+        printf("3- multiplication\n");
+        printf("4- division\n");
+        printf("5- history\n");
+        printf("6- exit\n");
         printf("~ Please choose an option: ");
 
-        // Take user input
-        if (scanf("%d", &option) != 1) { // Check for valid integer input
+        if (scanf("%d", &option) != 1) {
             printf("Invalid input. Please enter a number.\n");
-            // Clear input buffer
             while (getchar() != '\n');
             continue;
         }
 
-        // Validate the input
         if (option < 1 || option > 6) {
             printf("Invalid option. Please choose a number between 1 and 6.\n");
             continue;
         }
 
-        // Print the selected option
-        printf("You selected option %d.\n", option);
-
-        // Exit if the user chooses option 6
         if (option == 6) {
             printf("Exiting the program. Goodbye!\n");
             break;
         }
-    }
 
-    return 0;
-}
-
-```
-
-```
-pid_t pid = fork();
-
-        if (pid < 0) {
-            // Fork failed
-            perror("Fork failed");
-            exit(EXIT_FAILURE);
-        } else if (pid == 0) {
-            // Child process: Execute the corresponding file
-            switch (option) {
-                case 1:
-                    execl("./addition", "addition", NULL);
-                    break;
-                case 2:
-                    execl("./subtraction", "subtraction", NULL);
-                    break;
-                case 3:
-                    execl("./multiplication", "multiplication", NULL);
-                    break;
-                case 4:
-                    execl("./division", "division", NULL);
-                    break;
-                case 5:
-                    execl("./saver", "saver", NULL); // Assuming saver handles history
-                    break;
-            }
-            // If exec fails
-            perror("Exec failed");
-            exit(EXIT_FAILURE);
-        } else {
-            // Parent process: Wait for the child to complete
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status)) {
-                printf("Child process exited with status %d.\n", WEXITSTATUS(status));
-            } else {
-                printf("Child process did not exit successfully.\n");
-            }
-        }
-
-```
-
-
-```
-if (option >= 1 && option <= 4) {
+        if (option >= 1 && option <= 4) {
             // Take operands input
             printf("Enter the first number: ");
             if (scanf("%d", &operand1) != 1) {
@@ -133,39 +80,64 @@ if (option >= 1 && option <= 4) {
             }
         }
 
-```
+        // Communication Pipe
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
+            perror("Pipe failed");
+            exit(EXIT_FAILURE);
+        }
 
+        pid_t pid = fork();
 
-```
-// Child process
+        if (pid < 0) {
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            // Child process
             close(pipefd[1]); // Close the write end of the pipe
-            // Redirect the read end of the pipe to standard input
-            dup2(pipefd[0], STDIN_FILENO);
+            dup2(pipefd[0], STDIN_FILENO); // Redirect the read end of the pipe to stdin
             close(pipefd[0]); // Close the original read end
 
-
-```
-
-
-```
-// Parent process
-            close(pipefd[0]); // Close the read end of the pipe
-
-            if (option >= 1 && option <= 4) {
-                // Write operands to the pipe
-                dprintf(pipefd[1], "%d %d\n", operand1, operand2);
+            // Execute the corresponding file
+            switch (option) {
+                case 1:
+                    execl("./addition", "addition", NULL);
+                    break;
+                case 2:
+                    execl("./subtraction", "subtraction", NULL);
+                    break;
+                case 3:
+                    execl("./multiplication", "multiplication", NULL);
+                    break;
+                case 4:
+                    execl("./division", "division", NULL);
+                    break;
+                case 5:
+                    execl("./saver", "saver", NULL);
+                    break;
             }
-
+            perror("Exec failed");
+            exit(EXIT_FAILURE);
+        } else {
+            // Parent process
+            close(pipefd[0]); // Close the read end of the pipe
+            if (option >= 1 && option <= 4) {
+                dprintf(pipefd[1], "%d %d\n", operand1, operand2); // Write operands to the pipe
+            }
             close(pipefd[1]); // Close the write end of the pipe
-```
 
-
-```
-int a, b;
-    if (scanf("%d %d", &a, &b) != 2) {
-        fprintf(stderr, "Failed to read operands\n");
-        return 1;
+            int status;
+            waitpid(pid, &status, 0); // Wait for the child to complete
+            if (WIFEXITED(status)) {
+                printf("Child process exited with status %d.\n", WEXITSTATUS(status));
+            } else {
+                printf("Child process did not exit successfully.\n");
+            }
+        }
     }
-    printf("Result: %d\n", a + b);
+
+    return 0;
+}
+
 
 ```
