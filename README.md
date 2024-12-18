@@ -71,3 +71,45 @@ int main() {
 }
 
 ```
+
+```
+pid_t pid = fork();
+
+        if (pid < 0) {
+            // Fork failed
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            // Child process: Execute the corresponding file
+            switch (option) {
+                case 1:
+                    execl("./addition", "addition", NULL);
+                    break;
+                case 2:
+                    execl("./subtraction", "subtraction", NULL);
+                    break;
+                case 3:
+                    execl("./multiplication", "multiplication", NULL);
+                    break;
+                case 4:
+                    execl("./division", "division", NULL);
+                    break;
+                case 5:
+                    execl("./saver", "saver", NULL); // Assuming saver handles history
+                    break;
+            }
+            // If exec fails
+            perror("Exec failed");
+            exit(EXIT_FAILURE);
+        } else {
+            // Parent process: Wait for the child to complete
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status)) {
+                printf("Child process exited with status %d.\n", WEXITSTATUS(status));
+            } else {
+                printf("Child process did not exit successfully.\n");
+            }
+        }
+
+```
