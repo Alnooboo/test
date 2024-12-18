@@ -48,10 +48,11 @@ int main() {
 #include <sys/wait.h>
 
 int main() {
-    int option = 0;
-    int operand1, operand2;
+    int option = 0; // Variable to store user input
+    int operand1, operand2; // Operands for calculations
 
     while (1) {
+        // Display the menu
         printf("\nCalculator:\n");
         printf("1- addition\n");
         printf("2- subtraction\n");
@@ -63,7 +64,7 @@ int main() {
 
         if (scanf("%d", &option) != 1) {
             printf("Invalid input. Please enter a number.\n");
-            while (getchar() != '\n'); // Clear invalid input
+            while (getchar() != '\n');
             continue;
         }
 
@@ -78,21 +79,23 @@ int main() {
         }
 
         if (option >= 1 && option <= 4) {
+            // Take operands input
             printf("Enter the first number: ");
             if (scanf("%d", &operand1) != 1) {
                 printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n'); // Clear invalid input
+                while (getchar() != '\n');
                 continue;
             }
 
             printf("Enter the second number: ");
             if (scanf("%d", &operand2) != 1) {
                 printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n'); // Clear invalid input
+                while (getchar() != '\n');
                 continue;
             }
         }
 
+        // Communication Pipe
         int pipefd[2];
         if (pipe(pipefd) == -1) {
             perror("Pipe failed");
@@ -101,12 +104,16 @@ int main() {
 
         pid_t pid = fork();
 
-        if (pid == 0) {
+        if (pid < 0) {
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
             // Child process
-            close(pipefd[1]); // Close the write end
-            dup2(pipefd[0], STDIN_FILENO); // Redirect stdin to the read end of the pipe
-            close(pipefd[0]);
+            close(pipefd[1]); // Close the write end of the pipe
+            dup2(pipefd[0], STDIN_FILENO); // Redirect the read end of the pipe to stdin
+            close(pipefd[0]); // Close the original read end
 
+            // Execute the corresponding file
             switch (option) {
                 case 1:
                     execl("./addition", "addition", NULL);
@@ -124,38 +131,22 @@ int main() {
                     execl("./saver", "saver", NULL);
                     break;
             }
-
             perror("Exec failed");
             exit(EXIT_FAILURE);
         } else {
             // Parent process
-            close(pipefd[0]); // Close the read end
-
+            close(pipefd[0]); // Close the read end of the pipe
             if (option >= 1 && option <= 4) {
-                // Write operands to the pipe
-                dprintf(pipefd[1], "%d %d\n", operand1, operand2);
+                dprintf(pipefd[1], "%d %d\n", operand1, operand2); // Write operands to the pipe
             }
-            close(pipefd[1]); // Close the write end
+            close(pipefd[1]); // Close the write end of the pipe
 
-            char result[100] = {0};
             int status;
-            waitpid(pid, &status, 0);
-
-            if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-                // Read result from the pipe
-                printf("Result: %s", result);
-
-                // Call saver.c with the result
-                pid_t saver_pid = fork();
-                if (saver_pid == 0) {
-                    execl("./saver", "saver", result, NULL);
-                    perror("Exec failed");
-                    exit(EXIT_FAILURE);
-                } else {
-                    waitpid(saver_pid, &status, 0);
-                }
+            waitpid(pid, &status, 0); // Wait for the child to complete
+            if (WIFEXITED(status)) {
+                printf("Child process exited with status %d.\n", WEXITSTATUS(status));
             } else {
-                printf("Child process encountered an error.\n");
+                printf("Child process did not exit successfully.\n");
             }
         }
     }
