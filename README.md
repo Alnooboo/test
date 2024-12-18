@@ -109,9 +109,9 @@ int main() {
             exit(EXIT_FAILURE);
         } else if (pid == 0) {
             // Child process
-            close(pipefd[1]); // Close the write end of the pipe
-            dup2(pipefd[0], STDIN_FILENO); // Redirect the read end of the pipe to stdin
-            close(pipefd[0]); // Close the original read end
+            close(pipefd[0]); // Close the read end of the pipe
+            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to the write end of the pipe
+            close(pipefd[1]); // Close the original write end
 
             // Execute the corresponding file
             switch (option) {
@@ -127,32 +127,34 @@ int main() {
                 case 4:
                     execl("./division", "division", NULL);
                     break;
-                case 5:
-                    execl("./saver", "saver", NULL);
-                    break;
             }
             perror("Exec failed");
             exit(EXIT_FAILURE);
         } else {
             // Parent process
-            close(pipefd[0]); // Close the read end of the pipe
-            if (option >= 1 && option <= 4) {
-                dprintf(pipefd[1], "%d %d\n", operand1, operand2); // Write operands to the pipe
-            }
             close(pipefd[1]); // Close the write end of the pipe
 
-            int status;
-            waitpid(pid, &status, 0); // Wait for the child to complete
-            if (WIFEXITED(status)) {
-                printf("Child process exited with status %d.\n", WEXITSTATUS(status));
+            // Read the result from the pipe
+            char result[100];
+            ssize_t bytesRead = read(pipefd[0], result, sizeof(result) - 1);
+            close(pipefd[0]); // Close the read end of the pipe
+
+            if (bytesRead > 0) {
+                result[bytesRead] = '\0'; // Null-terminate the result
+                printf("The result after the operation is: %s\n", result);
             } else {
-                printf("Child process did not exit successfully.\n");
+                printf("Error: Failed to read result from operation.\n");
             }
+
+            // Wait for the child process to finish
+            int status;
+            waitpid(pid, &status, 0);
         }
     }
 
     return 0;
 }
+
 
 ```
 ```
@@ -162,19 +164,17 @@ int main() {
 int main() { 
     int a, b;
 
-    // Read operands from stdin (provided by the parent process via the pipe)
+    // Read operands from stdin (redirected by parent process)
     if (scanf("%d %d", &a, &b) != 2) {
         fprintf(stderr, "Failed to read operands\n");
         return 1;
     }
 
-    // Perform the calculation
+    // Perform the addition
     int result = a + b;
-    printf("%d\n", result); // Write the result to stdout (read by the parent)
+    printf("%d\n", result); // Send the result to stdout
 
     return 0; 
 }
-
-
 
 ```
