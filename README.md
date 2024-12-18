@@ -6,3 +6,11 @@ multiplication.c
 division.c
 saver.c
 results.txt
+
+// addition.c
+#include <stdio.h>
+int main() {
+    // Placeholder code
+    printf("Addition process started\n");
+    return 0;
+}
