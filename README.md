@@ -143,3 +143,28 @@ int main() {
 }
 
 ```
+
+```
+ if (option == 5) {
+            // Call history.c to display the history
+            pid_t history_pid = fork();
+            if (history_pid < 0) {
+                perror("Fork for history failed");
+                exit(EXIT_FAILURE);
+            } else if (history_pid == 0) {
+                execl("./history", "history", NULL);
+                perror("Exec failed for history");
+                exit(EXIT_FAILURE);
+            } else {
+                // Parent process waits for history to complete
+                int status;
+                waitpid(history_pid, &status, 0);
+                if (WIFEXITED(status)) {
+                    printf("History process exited with status %d.\n", WEXITSTATUS(status));
+                } else {
+                    printf("History process did not exit successfully.\n");
+                }
+            }
+            continue;
+        }
+```
