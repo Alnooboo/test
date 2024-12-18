@@ -30,11 +30,12 @@ gcc division.c -o division
 gcc saver.c -o saver
 ```
 
-```#include <stdio.h>
+```
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdio.h>
 
 int main() {
     int option = 0; // Variable to store user input
@@ -98,9 +99,9 @@ int main() {
             exit(EXIT_FAILURE);
         } else if (pid == 0) {
             // Child process
-            close(pipefd[1]); // Close the write end of the pipe
-            dup2(pipefd[0], STDIN_FILENO); // Redirect the read end of the pipe to stdin
-            close(pipefd[0]); // Close the original read end
+            close(pipefd[0]); // Close the read end of the pipe
+            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to the write end of the pipe
+            close(pipefd[1]); // Close the original write end
 
             // Execute the corresponding file
             switch (option) {
@@ -124,11 +125,15 @@ int main() {
             exit(EXIT_FAILURE);
         } else {
             // Parent process
-            close(pipefd[0]); // Close the read end of the pipe
-            if (option >= 1 && option <= 4) {
-                dprintf(pipefd[1], "%d %d\n", operand1, operand2); // Write operands to the pipe
-            }
             close(pipefd[1]); // Close the write end of the pipe
+
+            if (option >= 1 && option <= 4) {
+                char result[100]; // Buffer to store the result
+                read(pipefd[0], result, sizeof(result)); // Read the result from the pipe
+                close(pipefd[0]); // Close the read end of the pipe
+
+                printf("Result from operation: %s\n", result); // Print the result
+            }
 
             int status;
             waitpid(pid, &status, 0); // Wait for the child to complete
@@ -142,6 +147,7 @@ int main() {
 
     return 0;
 }
+
 ```
 ```
 
