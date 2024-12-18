@@ -145,3 +145,16 @@ if (option >= 1 && option <= 4) {
 
 
 ```
+
+
+```
+// Parent process
+            close(pipefd[0]); // Close the read end of the pipe
+
+            if (option >= 1 && option <= 4) {
+                // Write operands to the pipe
+                dprintf(pipefd[1], "%d %d\n", operand1, operand2);
+            }
+
+            close(pipefd[1]); // Close the write end of the pipe
+```
