@@ -8,15 +8,15 @@ saver.c
 results.txt
 
 ```
- gcc calculator.c -o calculator
+gcc calculator.c -o calculator
 ```
 
 ```
-    gcc addition.c -o addition
+gcc addition.c -o addition
 ```
 
 ```
-    gcc subtraction.c -o subtraction
+gcc subtraction.c -o subtraction
 ```
 
 ```
@@ -24,10 +24,10 @@ gcc multiplication.c -o multiplication
 ```
 
 ```
-    gcc division.c -o division
+gcc division.c -o division
 ```
 ```
-    gcc saver.c -o saver
+gcc saver.c -o saver
 ```
 
 ```
@@ -135,7 +135,7 @@ int main() {
             close(parent_to_child[1]); // Close write end after sending
 
             // Read result from the child-to-parent pipe
-            char result[100];
+            char result[100] = {0};
             ssize_t bytesRead = read(child_to_parent[0], result, sizeof(result) - 1);
             close(child_to_parent[0]); // Close read end after receiving
 
