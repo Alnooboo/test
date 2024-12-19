@@ -43,8 +43,36 @@ gcc history.c -o history
 #include <string.h>
 
 int main() {
+    int pipes[4][2]; // Four pipes: one for each operation
+    pid_t pids[4];   // PIDs of the operation child processes
+    char *operations[] = {"addition", "subtraction", "multiplication", "division"};
+
+    // Create pipes and fork child processes
+    for (int i = 0; i < 4; i++) {
+        if (pipe(pipes[i]) == -1) {
+            perror("Pipe creation failed");
+            exit(EXIT_FAILURE);
+        }
+
+        pids[i] = fork();
+        if (pids[i] < 0) {
+            perror("Fork failed");
+            exit(EXIT_FAILURE);
+        } else if (pids[i] == 0) {
+            // Child process for operation
+            close(pipes[i][1]); // Close write end
+            dup2(pipes[i][0], STDIN_FILENO); // Redirect stdin to read end of pipe
+            close(pipes[i][0]); // Close read end after duplication
+            execl(operations[i], operations[i], NULL);
+            perror("Exec failed");
+            exit(EXIT_FAILURE);
+        }
+        close(pipes[i][0]); // Close read end in parent
+    }
+
     int option = 0;
-    double operand1, operand2;
+    int operand1, operand2;
+    char buffer[100];
 
     while (1) {
         printf("\nCalculator:\n");
@@ -64,121 +92,60 @@ int main() {
 
         if (option == 6) {
             printf("Exiting the program. Goodbye!\n");
+            for (int i = 0; i < 4; i++) kill(pids[i], SIGTERM); // Terminate child processes
             break;
         }
-        
+
         if (option == 5) {
             pid_t history_pid = fork();
-            if (history_pid < 0) {
-                perror("Fork for history failed");
-                exit(EXIT_FAILURE);
-            } else if (history_pid == 0) {
+            if (history_pid == 0) {
                 execl("./history", "history", NULL);
                 perror("Exec failed for history");
                 exit(EXIT_FAILURE);
-            } else {
-                int status;
-                waitpid(history_pid, &status, 0);
-                if (WIFEXITED(status)) {
-                    printf("History process exited with status %d.\n", WEXITSTATUS(status));
-                } else {
-                    printf("History process did not exit successfully.\n");
-                }
             }
+            wait(NULL);
             continue;
         }
 
         if (option >= 1 && option <= 4) {
             printf("Enter the first number: ");
-            if (scanf("%lf", &operand1) != 1) {
+            if (scanf("%d", &operand1) != 1) {
                 printf("Invalid input. Please enter a number.\n");
                 while (getchar() != '\n');
                 continue;
             }
 
             printf("Enter the second number: ");
-            if (scanf("%lf", &operand2) != 1) {
+            if (scanf("%d", &operand2) != 1) {
                 printf("Invalid input. Please enter a number.\n");
                 while (getchar() != '\n');
                 continue;
             }
-        }
 
-        int pipefd[2];
-        if (pipe(pipefd) == -1) {
-            perror("Pipe failed");
-            exit(EXIT_FAILURE);
-        }
+            // Send operands to the selected operation process
+            snprintf(buffer, sizeof(buffer), "%d %d", operand1, operand2);
+            write(pipes[option - 1][1], buffer, strlen(buffer) + 1);
 
-        pid_t pid = fork();
-
-        if (pid < 0) {
-            perror("Fork failed");
-            exit(EXIT_FAILURE);
-        } else if (pid == 0) {
-            close(pipefd[0]);
-            dup2(pipefd[1], STDOUT_FILENO);
-            close(pipefd[1]);
-
-            char op1[20], op2[20];
-            snprintf(op1, sizeof(op1), "%f", operand1);
-            snprintf(op2, sizeof(op2), "%f", operand2);
-
-            switch (option) {
-                case 1:
-                    execl("./addition", "addition", op1, op2, NULL);
-                    break;
-                case 2:
-                    execl("./subtraction", "subtraction", op1, op2, NULL);
-                    break;
-                case 3:
-                    execl("./multiplication", "multiplication", op1, op2, NULL);
-                    break;
-                case 4:
-                    execl("./division", "division", op1, op2, NULL);
-                    break;
-            }
-            perror("Exec failed");
-            exit(EXIT_FAILURE);
-        } else {
-            close(pipefd[1]);
-
-            char result[100];
-            read(pipefd[0], result, sizeof(result));
-            close(pipefd[0]);
-
-            if (option == 4 && operand2 == 0) {
-                printf("Error: Division by zero is not allowed. Result not saved.\n");
-                continue;
+            // Read result from the operation process
+            int result_pipe[2];
+            if (pipe(result_pipe) == -1) {
+                perror("Result pipe creation failed");
+                exit(EXIT_FAILURE);
             }
 
-            if (strncmp(result, "NaN", 3) != 0) { // Only save valid results
-                pid_t saver_pid = fork();
-                if (saver_pid < 0) {
-                    perror("Fork for saver failed");
-                    exit(EXIT_FAILURE);
-                } else if (saver_pid == 0) {
-                    execl("./saver", "saver", result, NULL);
-                    perror("Exec failed for saver");
-                    exit(EXIT_FAILURE);
-                } else {
-                    int status;
-                    waitpid(saver_pid, &status, 0);
-                    if (WIFEXITED(status)) {
-                        printf("Saver process exited with status %d.\n", WEXITSTATUS(status));
-                    } else {
-                        printf("Saver process did not exit successfully.\n");
-                    }
-                }
+            pid_t saver_pid = fork();
+            if (saver_pid == 0) {
+                // Saver process
+                char result[100];
+                read(result_pipe[0], result, sizeof(result));
+                close(result_pipe[0]);
+                execl("./saver", "saver", result, NULL);
+                perror("Exec failed for saver");
+                exit(EXIT_FAILURE);
             }
 
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status)) {
-                printf("Child process exited with status %d.\n", WEXITSTATUS(status));
-            } else {
-                printf("Child process did not exit successfully.\n");
-            }
+            close(result_pipe[1]); // Close write end in parent
+            wait(NULL);            // Wait for saver process to complete
         }
     }
 
@@ -186,53 +153,32 @@ int main() {
 }
 
 ```
-```
-if (strncmp(result, "NaN", 3) != 0) { // Check if result is valid
-    pid_t saver_pid = fork();
-    if (saver_pid < 0) {
-        perror("Fork for saver failed");
-        exit(EXIT_FAILURE);
-    } else if (saver_pid == 0) {
-        execl("./saver", "saver", result, NULL);
-        perror("Exec failed for saver");
-        exit(EXIT_FAILURE);
-    } else {
-        int status;
-        waitpid(saver_pid, &status, 0);
-        if (WIFEXITED(status)) {
-            printf("Saver process exited with status %d.\n", WEXITSTATUS(status));
-        } else {
-            printf("Saver process did not exit successfully.\n");
-        }
-    }
-}
-
 
 ```
-
-```
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-int main(int argc, char *argv[]) { 
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <operand1> <operand2>\n", argv[0]);
-        return 1;
+int main() {
+    int operand1, operand2, result;
+
+    while (scanf("%d %d", &operand1, &operand2) == 2) {
+        result = operand1 + operand2;
+
+        // Call saver.c
+        pid_t saver_pid = fork();
+        if (saver_pid == 0) {
+            char result_str[50];
+            snprintf(result_str, sizeof(result_str), "%d", result);
+            execl("./saver", "saver", result_str, NULL);
+            perror("Exec failed for saver");
+            exit(EXIT_FAILURE);
+        }
+
+        wait(NULL); // Wait for saver to complete
+        printf("%d\n", result); // Send result back to calculator.c
     }
-
-    double a = atof(argv[1]);
-    double b = atof(argv[2]);
-    if (b == 0) {
-        fprintf(stderr, "Error: Division by zero is not allowed.\n");
-        printf("NaN\n"); // Send NaN to indicate an invalid result
-        return 1;
-    }
-
-    double result = a / b;
-    printf("%f\n", result); // Send result to stdout
-    fprintf(stderr, "Result: %f\n", result);
 
     return 0;
 }
-
 ```
+
