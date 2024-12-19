@@ -86,14 +86,17 @@ int main() {
 
         if (scanf("%d", &option) != 1 || option < 1 || option > 6) {
             printf("Invalid input. Please enter a number between 1 and 6.\n");
-            while (getchar() != '\n');
+            while (getchar() != '\n'); // Clear invalid input
             continue;
         }
 
         if (option == 6) {
             printf("Exiting the program. Goodbye!\n");
-            for (int i = 0; i < 4; i++) kill(pids[i], SIGTERM); // Terminate child processes
-            break;
+            // Kill all child processes
+            for (int i = 0; i < 4; i++) {
+                kill(pids[i], SIGTERM); // Terminate operation child processes
+            }
+            break; // Exit the loop
         }
 
         if (option == 5) {
@@ -103,7 +106,7 @@ int main() {
                 perror("Exec failed for history");
                 exit(EXIT_FAILURE);
             }
-            wait(NULL);
+            wait(NULL); // Wait for history process to finish
             continue;
         }
 
@@ -126,26 +129,10 @@ int main() {
             snprintf(buffer, sizeof(buffer), "%d %d", operand1, operand2);
             write(pipes[option - 1][1], buffer, strlen(buffer) + 1);
 
-            // Read result from the operation process
-            int result_pipe[2];
-            if (pipe(result_pipe) == -1) {
-                perror("Result pipe creation failed");
-                exit(EXIT_FAILURE);
-            }
-
-            pid_t saver_pid = fork();
-            if (saver_pid == 0) {
-                // Saver process
-                char result[100];
-                read(result_pipe[0], result, sizeof(result));
-                close(result_pipe[0]);
-                execl("./saver", "saver", result, NULL);
-                perror("Exec failed for saver");
-                exit(EXIT_FAILURE);
-            }
-
-            close(result_pipe[1]); // Close write end in parent
-            wait(NULL);            // Wait for saver process to complete
+            // Read result from the pipe
+            char result[100];
+            read(pipes[option - 1][0], result, sizeof(result));
+            printf("Result: %s\n", result);
         }
     }
 
