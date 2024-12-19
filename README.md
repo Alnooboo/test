@@ -35,136 +35,55 @@ gcc history.c -o history
 ```
 
 ```
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <stdio.h>
 
-int main() {
-    int option = 0; // Variable to store user input
-    int operand1, operand2; // Operands for calculations
-
-    while (1) {
-        // Display the menu
-        printf("\nCalculator:\n");
-        printf("1- addition\n");
-        printf("2- subtraction\n");
-        printf("3- multiplication\n");
-        printf("4- division\n");
-        printf("5- history\n");
-        printf("6- exit\n");
-        printf("~ Please choose an option: ");
-
-        if (scanf("%d", &option) != 1) {
-            printf("Invalid input. Please enter a number.\n");
-            while (getchar() != '\n');
-            continue;
+```
+```
+if (strncmp(result, "NaN", 3) != 0) { // Check if result is valid
+    pid_t saver_pid = fork();
+    if (saver_pid < 0) {
+        perror("Fork for saver failed");
+        exit(EXIT_FAILURE);
+    } else if (saver_pid == 0) {
+        execl("./saver", "saver", result, NULL);
+        perror("Exec failed for saver");
+        exit(EXIT_FAILURE);
+    } else {
+        int status;
+        waitpid(saver_pid, &status, 0);
+        if (WIFEXITED(status)) {
+            printf("Saver process exited with status %d.\n", WEXITSTATUS(status));
+        } else {
+            printf("Saver process did not exit successfully.\n");
         }
-
-        if (option < 1 || option > 6) {
-            printf("Invalid option. Please choose a number between 1 and 6.\n");
-            continue;
-        }
-
-        if (option == 6) {
-            printf("Exiting the program. Goodbye!\n");
-            break;
-        }
-
-        if (option == 5) {
-            // Call history.c to display the history
-            pid_t history_pid = fork();
-            if (history_pid < 0) {
-                perror("Fork for history failed");
-                exit(EXIT_FAILURE);
-            } else if (history_pid == 0) {
-                execl("./history", "history", NULL);
-                perror("Exec failed for history");
-                exit(EXIT_FAILURE);
-            } else {
-                // Parent process waits for history to complete
-                int status;
-                waitpid(history_pid, &status, 0);
-                if (WIFEXITED(status)) {
-                    printf("History process exited with status %d.\n", WEXITSTATUS(status));
-                } else {
-                    printf("History process did not exit successfully.\n");
-                }
-            }
-            continue;
-        }
-
-        if (option >= 1 && option <= 4) {
-            // Take operands input
-            printf("Enter the first number: ");
-            if (scanf("%d", &operand1) != 1) {
-                printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n');
-                continue;
-            }
-
-            printf("Enter the second number: ");
-            if (scanf("%d", &operand2) != 1) {
-                printf("Invalid input. Please enter a number.\n");
-                while (getchar() != '\n');
-                continue;
-            }
-        }
-
-        // The rest of the code for operations (1–4) and saver remains unchanged
     }
-
-    return 0;
 }
 
 
 ```
-```
-#include <stdio.h>
-#include <stdlib.h>
 
-int main() {
-    FILE *file = fopen("results.txt", "r");
-    if (!file) {
-        perror("Failed to open results file");
+```
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(int argc, char *argv[]) { 
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <operand1> <operand2>\n", argv[0]);
         return 1;
     }
 
-    char line[256];
-    printf("Calculation History:\n");
-    printf("=====================\n");
-    while (fgets(line, sizeof(line), file)) {
-        printf("%s", line); // Print each line from the file
+    double a = atof(argv[1]);
+    double b = atof(argv[2]);
+    if (b == 0) {
+        fprintf(stderr, "Error: Division by zero is not allowed.\n");
+        printf("NaN\n"); // Send NaN to indicate an invalid result
+        return 1;
     }
-    fclose(file);
+
+    double result = a / b;
+    printf("%f\n", result); // Send result to stdout
+    fprintf(stderr, "Result: %f\n", result);
 
     return 0;
 }
 
-```
-
-```
- if (option == 5) {
-            // Call history.c to display the history
-            pid_t history_pid = fork();
-            if (history_pid < 0) {
-                perror("Fork for history failed");
-                exit(EXIT_FAILURE);
-            } else if (history_pid == 0) {
-                execl("./history", "history", NULL);
-                perror("Exec failed for history");
-                exit(EXIT_FAILURE);
-            } else {
-                // Parent process waits for history to complete
-                int status;
-                waitpid(history_pid, &status, 0);
-                if (WIFEXITED(status)) {
-                    printf("History process exited with status %d.\n", WEXITSTATUS(status));
-                } else {
-                    printf("History process did not exit successfully.\n");
-                }
-            }
-            continue;
-        }
 ```
