@@ -99,3 +99,47 @@ int main() {
 
 ```
 
+fix:
+```
+if (pids[i] == 0) {
+    // Child process for operation
+    close(pipes[i][0]); // Close read end
+    dup2(pipes[i][1], STDOUT_FILENO); // Redirect stdout to write end of pipe
+    close(pipes[i][1]); // Close write end after redirection
+
+    execl(operations[i], operations[i], NULL);
+    perror("Exec failed");
+    exit(EXIT_FAILURE);
+}
+```
+```
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    int operand1, operand2, result;
+
+    while (scanf("%d %d", &operand1, &operand2) == 2) {
+        result = operand1 + operand2;
+
+        // Call saver.c to save the result
+        pid_t saver_pid = fork();
+        if (saver_pid == 0) {
+            char result_str[50];
+            snprintf(result_str, sizeof(result_str), "%d", result);
+            execl("./saver", "saver", result_str, NULL);
+            perror("Exec failed for saver");
+            exit(EXIT_FAILURE);
+        }
+
+        wait(NULL); // Wait for saver to complete
+
+        // Send result back to calculator.c
+        printf("%d\n", result); // This now goes through the pipe
+        fflush(stdout); // Ensure it’s flushed to the pipe
+    }
+
+    return 0;
+}
+
+```
